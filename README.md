@@ -28,7 +28,7 @@ No API key. No server. No embedding model. That works, right now, on a machine t
 
 ## The problem this is shaped around
 
-Every agent memory library assumes the network. `remember()` calls an embedding API, so a write fails when the connection drops. On a link that drops for hours at a time, a memory store that refuses to write until it can reach a model is not a memory store, it is an outage.
+The agent memory libraries mostly assume the network. `remember()` calls an embedding API, so a write fails when the connection drops. On a link that drops for hours at a time, a memory store that refuses to write until it can reach a model is not a memory store, it is an outage.
 
 hinterland inverts that. **The write is durable first and embedded second**, and the embedding is allowed to fail:
 
@@ -162,6 +162,14 @@ class MyEmbedder {
 32 tests on Linux, macOS and Windows. The offline path, the backfill path, model swapping, query sanitisation and the export round trip all have tests.
 
 **The Ollama embedder has not been run against a live Ollama.** It is written against the documented `/api/embed` and `/api/tags` endpoints and tested with a deterministic fake, which is the right way to test fusion and ranking, but it is not the same as a real model server. If you run it against one, an issue describing what broke is the most useful thing you could send.
+
+## Where this sits
+
+Local search on npm is not a gap. [`@orama/orama`](https://www.npmjs.com/package/@orama/orama) is a complete search engine and RAG pipeline that runs in process, and the `sqlite-vec` bindings put vector search inside SQLite directly. If what you want is a search engine, take one of those.
+
+The difference here is the failure mode rather than the feature list. Those treat the embedding as either present or somebody else's problem. This is built for the case where it is neither: the write commits before an embedding is attempted, recall falls back to lexical search when no vector exists yet, and nothing on the read path fails because the link is down.
+
+Checked on npm on 8 September 2026.
 
 ## Requirements
 
