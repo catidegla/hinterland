@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # node:sqlite landed in 22.5. Both a current and an older supported
+        # line are covered, because the SQLite binding is the one part of this
+        # that varies by runtime.
+        node: ['22', '24']
+
+    name: ${{ matrix.os }} / node ${{ matrix.node }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: node:sqlite is usable on this runtime
+        run: |
+          node -e "
+            const { DatabaseSync } = require('node:sqlite');
+            const db = new DatabaseSync(':memory:');
+            db.exec('CREATE VIRTUAL TABLE t USING fts5(c)');
+            console.log('node:sqlite and FTS5 available on ' + process.version);
+          "
+
+      - run: npm test
+
+  offline:
+    name: Works with no network
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The central claim of this package. Every outbound request is made to
+      # fail, and remember and recall still have to work.
+      - name: remember and recall with outbound requests blocked
+        run: |
+          cat > offline-check.mjs <<'EOF'
+          globalThis.fetch = async () => { throw new Error('network is down'); };
+
+          const { Memory } = await import('./src/memory.mjs');
+          const { OllamaEmbedder } = await import('./src/embed.mjs');
+
+          // Configured with an embedder that cannot possibly be reached.
+          const memory = Memory.open(':memory:', { embedder: new OllamaEmbedder() });
+
+          await memory.remember('The Benin gateway settles overnight');
+          await memory.remember('Deploy the server with pm2');
+
+          const hits = await memory.recall('gateway settlement');
+          if (hits.length !== 1) throw new Error('recall failed with no network: ' + hits.length);
+          if (memory.pending() !== 2) throw new Error('memories should be queued for embedding');
+
+          const backfill = await memory.backfill();
+          if (backfill.embedded !== 0) throw new Error('nothing should have been embedded');
+          if (!backfill.reason) throw new Error('backfill must say why it did nothing');
+
+          console.log('wrote, recalled and reported honestly with every request failing');
+          EOF
+          node offline-check.mjs
+
+  package:
+    name: Package contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: The published tarball actually runs
+        run: |
+          npm pack --pack-destination /tmp
+          mkdir /tmp/consumer && cd /tmp/consumer
+          npm init -y > /dev/null
+          npm i /tmp/hinterland-*.tgz
+
+          ./node_modules/.bin/hinterland --version
+          ./node_modules/.bin/hinterland remember "a memory from the installed package" --json > /dev/null
+          ./node_modules/.bin/hinterland recall "installed package" --json | node -e "
+            let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{
+              const hits = JSON.parse(d);
+              if (!hits.length) throw new Error('installed package could not recall');
+              console.log('installed package stored and recalled');
+            })"
+
+      - name: No runtime dependencies
+        run: |
+          count=$(node -p "Object.keys(require('./package.json').dependencies || {}).length")
+          [ "$count" = "0" ] || { echo "expected zero dependencies, found $count"; exit 1; }
+          echo "zero runtime dependencies"
