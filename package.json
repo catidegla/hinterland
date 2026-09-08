@@ -1,0 +1,50 @@
+{
+  "name": "hinterland",
+  "version": "0.1.0",
+  "description": "Agent memory that works where the network does not. One SQLite file, full text recall with no model at all, semantic recall when one is reachable, and backfill for everything written offline. Zero dependencies.",
+  "type": "module",
+  "bin": {
+    "hinterland": "bin/hinterland.mjs"
+  },
+  "exports": {
+    ".": "./src/memory.mjs",
+    "./embed": "./src/embed.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "test": "node --test test/memory.test.mjs test/cli.test.mjs"
+  },
+  "keywords": [
+    "agent-memory",
+    "memory",
+    "llm",
+    "rag",
+    "retrieval",
+    "sqlite",
+    "offline-first",
+    "edge",
+    "local-first",
+    "embeddings",
+    "bm25",
+    "hybrid-search",
+    "ollama"
+  ],
+  "author": "Christ-loisele Atidegla",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/catidegla/hinterland.git"
+  },
+  "homepage": "https://github.com/catidegla/hinterland#readme",
+  "bugs": {
+    "url": "https://github.com/catidegla/hinterland/issues"
+  }
+}
