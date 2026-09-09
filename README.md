@@ -2,7 +2,7 @@
 
 # hinterland
 
-**Agent memory that works where the network does not.**
+Agent memory that works where the network does not.
 
 One SQLite file. Full text recall with no model at all, semantic recall when one is reachable, and backfill for everything written offline.
 
@@ -81,7 +81,7 @@ $ hinterland stats
   scopes   work 380, personal 32
 ```
 
-When recall finds nothing and no embedder is configured, it says so rather than shrugging:
+When recall finds nothing and no embedder is configured, it says so instead of shrugging:
 
 ```
   Nothing matched.
@@ -102,11 +102,11 @@ hinterland import memories.jsonl
 
 Ids are preserved, so importing the same file twice **updates rather than duplicates**. On an intermittent link the same file gets carried across more than once, and that has to be safe.
 
-A corrupt line is skipped with a count rather than aborting the import.
+A corrupt line is skipped with a count instead of aborting the import.
 
 ## API
 
-Four verbs. That is the whole surface.
+Four verbs, and that is the whole API.
 
 ```js
 const memory = Memory.open('./memory.db', { embedder });
@@ -149,19 +149,19 @@ class MyEmbedder {
 
 ## Things it does on purpose
 
-**Vectors from different models are never compared.** Swap your embedding model and the old vectors stop being used and get queued for re-embedding, rather than being silently compared across incompatible spaces to produce confident nonsense.
+Vectors from different models are never compared. Swap your embedding model and the old vectors stop being used and get queued for re-embedding, rather than being silently compared across incompatible spaces to produce confident nonsense.
 
 **Rewriting a memory drops its vector**, because the old one described text that no longer exists.
 
-**Search is a linear scan, not an approximate index.** For a personal or single-device memory in the low tens of thousands of rows, scanning Float32 arrays takes a few milliseconds. An ANN index would add a dependency, a build step and a class of silent recall failures in exchange for a speedup nobody at this scale would notice.
+Search is a linear scan, not an approximate index. For a personal or single-device memory in the low tens of thousands of rows, scanning Float32 arrays takes a few milliseconds. An ANN index would add a dependency, a build step and a class of silent recall failures in exchange for a speedup nobody at this scale would notice.
 
-**Queries are sanitised before they reach FTS5.** A user typing `payment AND` or an apostrophe should get a search, not a syntax error.
+Queries are sanitised before they reach FTS5. A user typing `payment AND` or an apostrophe should get a search, not a syntax error.
 
 ## What has and has not been verified
 
 32 tests on Linux, macOS and Windows. The offline path, the backfill path, model swapping, query sanitisation and the export round trip all have tests.
 
-**The Ollama embedder has not been run against a live Ollama.** It is written against the documented `/api/embed` and `/api/tags` endpoints and tested with a deterministic fake, which is the right way to test fusion and ranking, but it is not the same as a real model server. If you run it against one, an issue describing what broke is the most useful thing you could send.
+The Ollama embedder has not been run against a live Ollama. It is written against the documented `/api/embed` and `/api/tags` endpoints and tested with a deterministic fake, which is the right way to test fusion and ranking, but it is not the same as a real model server. If you run it against one, an issue describing what broke is the most useful thing you could send.
 
 ## Where this sits
 
